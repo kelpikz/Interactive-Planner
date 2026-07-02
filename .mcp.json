@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "plan-review": {
+      "command": "node",
+      "args": ["server/index.mjs"]
+    }
+  }
+}

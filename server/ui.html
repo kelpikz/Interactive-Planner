@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Plan review</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #6b7280; --line: #e5e7eb;
+    --accent: #2563eb; --sidebar: #f9fafb; --quote: #f3f4f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --fg: #e5e7eb; --muted: #9ca3af; --line: #2a2f3a;
+      --accent: #60a5fa; --sidebar: #151821; --quote: #1e222c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    display: grid; grid-template-columns: 1fr 340px; height: 100vh;
+  }
+  main { overflow-y: auto; padding: 2.5rem 3rem; }
+  #plan-content { max-width: 46rem; }
+  #plan-content h1 { margin-top: 0; }
+  #plan-content pre {
+    background: var(--quote); padding: 1rem; border-radius: 8px; overflow-x: auto;
+  }
+  #plan-content code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
+  #plan-content pre code { background: none; }
+  #plan-content :not(pre) > code { background: var(--quote); padding: 0.1em 0.35em; border-radius: 4px; }
+  #plan-content blockquote { border-left: 3px solid var(--line); margin-left: 0; padding-left: 1rem; color: var(--muted); }
+  #plan-content table { border-collapse: collapse; }
+  #plan-content th, #plan-content td { border: 1px solid var(--line); padding: 0.4rem 0.7rem; }
+
+  aside {
+    border-left: 1px solid var(--line); background: var(--sidebar);
+    display: flex; flex-direction: column; height: 100vh;
+  }
+  .side-head {
+    padding: 1rem 1.25rem; border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; justify-content: space-between;
+  }
+  .side-head h2 { margin: 0; font-size: 1rem; }
+  #version { color: var(--muted); font-size: 0.85rem; }
+  #comments { flex: 1; overflow-y: auto; padding: 0.75rem 1rem; }
+  .empty { color: var(--muted); font-size: 0.9rem; }
+  .comment {
+    position: relative; background: var(--bg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 0.6rem 0.75rem; margin-bottom: 0.6rem;
+  }
+  .comment .quote {
+    font-size: 0.8rem; color: var(--muted); border-left: 2px solid var(--accent);
+    padding-left: 0.5rem; margin-bottom: 0.35rem; white-space: pre-wrap;
+    max-height: 4.5rem; overflow: hidden;
+  }
+  .comment .note { font-size: 0.92rem; white-space: pre-wrap; }
+  .comment .remove {
+    position: absolute; top: 0.3rem; right: 0.4rem; border: none; background: none;
+    color: var(--muted); font-size: 1.1rem; cursor: pointer; line-height: 1;
+  }
+  .comment .remove:hover { color: var(--fg); }
+  .side-foot { padding: 1rem 1.25rem; border-top: 1px solid var(--line); }
+  .side-foot .btn-row { display: flex; gap: 0.6rem; }
+  #iterate, #approve {
+    flex: 1; padding: 0.7rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    border: none; border-radius: 8px;
+  }
+  #iterate { background: var(--accent); color: #fff; }
+  #approve { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+  #approve:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  #iterate:disabled, #approve:disabled { opacity: 0.55; cursor: default; }
+  #status { margin: 0.6rem 0 0; font-size: 0.85rem; color: var(--muted); text-align: center; }
+
+  #popover {
+    position: absolute; z-index: 10; width: 280px; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 10px; padding: 0.6rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  }
+  #popover textarea {
+    width: 100%; height: 4.5rem; resize: vertical; border: 1px solid var(--line);
+    border-radius: 6px; padding: 0.4rem; font: inherit; background: var(--bg); color: var(--fg);
+  }
+  #popover .row { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.5rem; }
+  #popover button { padding: 0.35rem 0.8rem; border-radius: 6px; border: 1px solid var(--line); cursor: pointer; background: var(--bg); color: var(--fg); }
+  #popover #save { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .waiting { color: var(--muted); padding: 2rem 0; }
+</style>
+</head>
+<body>
+  <main>
+    <div id="plan-content"><p class="waiting">Waiting for Claude to publish a plan…</p></div>
+  </main>
+
+  <aside>
+    <div class="side-head"><h2>Comments</h2><span id="version"></span></div>
+    <div id="comments"><p class="empty">No comments yet. Select text in the plan to add one.</p></div>
+    <div class="side-foot">
+      <div class="btn-row">
+        <button id="approve" disabled>✓ Approve</button>
+        <button id="iterate" disabled>Iterate →</button>
+      </div>
+      <p id="status"></p>
+    </div>
+  </aside>
+
+  <div id="popover" hidden>
+    <textarea id="note" placeholder="Comment on the selected text…"></textarea>
+    <div class="row">
+      <button id="cancel">Cancel</button>
+      <button id="save">Comment</button>
+    </div>
+  </div>
+
+<script>
+  const planContent = document.getElementById("plan-content");
+  const commentsEl = document.getElementById("comments");
+  const iterateBtn = document.getElementById("iterate");
+  const approveBtn = document.getElementById("approve");
+  const statusEl = document.getElementById("status");
+  const versionEl = document.getElementById("version");
+  const popover = document.getElementById("popover");
+  const noteEl = document.getElementById("note");
+
+  let selectedText = "";
+  let hasPlan = false;
+  let closing = false;
+
+  function renderComments(list) {
+    commentsEl.innerHTML = "";
+    if (!list.length) {
+      commentsEl.innerHTML = '<p class="empty">No comments yet. Select text in the plan to add one.</p>';
+      return;
+    }
+    for (const c of list) {
+      const div = document.createElement("div");
+      div.className = "comment";
+
+      const x = document.createElement("button");
+      x.className = "remove"; x.textContent = "×"; x.title = "Remove";
+      x.onclick = () => fetch("/comments/" + c.id, { method: "DELETE" });
+
+      const q = document.createElement("div");
+      q.className = "quote";
+      q.textContent = c.quotedText ? "“" + c.quotedText + "”" : "(general note)";
+
+      const n = document.createElement("div");
+      n.className = "note"; n.textContent = c.comment;
+
+      div.append(x, q, n);
+      commentsEl.appendChild(div);
+    }
+  }
+
+  const es = new EventSource("/events");
+  es.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (data.type === "plan") {
+      planContent.innerHTML = data.html;
+      versionEl.textContent = "v" + data.version;
+      statusEl.textContent = "";
+      iterateBtn.disabled = false;
+      approveBtn.disabled = false;
+      hasPlan = true;
+      hidePopover();
+    } else if (data.type === "comments") {
+      renderComments(data.comments);
+    } else if (data.type === "closed") {
+      onClosed();
+    }
+  };
+  es.onerror = () => {
+    if (closing) return; // expected: server shut down after approval
+    statusEl.textContent = "Disconnected — is the server still running?";
+  };
+
+  // Text selection → comment popover.
+  planContent.addEventListener("mouseup", () => {
+    if (!hasPlan) return;
+    const sel = window.getSelection();
+    const text = sel.toString().trim();
+    if (text) {
+      selectedText = text;
+      const rect = sel.getRangeAt(0).getBoundingClientRect();
+      popover.style.top = window.scrollY + rect.bottom + 8 + "px";
+      popover.style.left = window.scrollX + rect.left + "px";
+      popover.hidden = false;
+      noteEl.value = "";
+      noteEl.focus();
+    }
+  });
+
+  // Dismiss popover when clicking away from it.
+  document.addEventListener("mousedown", (e) => {
+    if (!popover.hidden && !popover.contains(e.target)) hidePopover();
+  });
+
+  function hidePopover() {
+    popover.hidden = true;
+    selectedText = "";
+  }
+
+  document.getElementById("save").onclick = async () => {
+    const comment = noteEl.value.trim();
+    if (!comment) { noteEl.focus(); return; }
+    await fetch("/comments", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ quotedText: selectedText, comment }),
+    });
+    hidePopover();
+    window.getSelection().removeAllRanges();
+  };
+  document.getElementById("cancel").onclick = () => hidePopover();
+
+  // Cmd/Ctrl+Enter submits the comment from the textarea.
+  noteEl.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") document.getElementById("save").click();
+  });
+
+  iterateBtn.onclick = async () => {
+    iterateBtn.disabled = true;
+    approveBtn.disabled = true;
+    statusEl.textContent = "Sent — Claude is revising the plan…";
+    await fetch("/iterate", { method: "POST" });
+  };
+
+  approveBtn.onclick = async () => {
+    if (!hasPlan) return;
+    closing = true;
+    iterateBtn.disabled = true;
+    approveBtn.disabled = true;
+    statusEl.textContent = "Approving…";
+    try { await fetch("/approve", { method: "POST" }); } catch {}
+  };
+
+  // Server tells us it is shutting down after approval. Attempt to close the tab
+  // (browsers block window.close() on non-script-opened pages, so also show a
+  // clear message as a fallback).
+  function onClosed() {
+    closing = true;
+    hidePopover();
+    iterateBtn.disabled = true;
+    approveBtn.disabled = true;
+    statusEl.textContent = "Plan approved ✓ — server stopped. You can close this tab.";
+    document.title = "Approved ✓";
+    try { window.close(); } catch {}
+  }
+</script>
+</body>
+</html>

@@ -1,23 +1,17 @@
 ---
-description: Review the current plan in the browser with inline comments, and iterate until approved.
+description: Review a plan in a browser with inline comments and private side chats
+allowed-tools:
+  - mcp__plan-review__publish_plan
+  - mcp__plan-review__await_feedback
+  - mcp__plan-review__publish_answer
 ---
 
-You are running the **plan-review** loop. The user wants to review a plan you've
-produced by leaving inline comments in a browser, instead of describing edits in chat.
+Run the interactive plan-review loop for the most recent plan or proposal.
 
-Do this:
+1. Publish the complete plan Markdown with `publish_plan`, then call `await_feedback`.
+2. On comment feedback, revise every quoted passage, republish the complete plan, and await feedback again.
+3. While `await_feedback` is blocked, the plugin automatically answers browser questions in private, in-memory Codex threads. Do not fork or manage tasks for them.
+4. If `await_feedback` returns a `chat_message` fallback, answer the actual question directly in this task, publish the genuine answer with `publish_answer`, and await feedback again. Never publish canned, placeholder, sample, test, or workflow-description text.
+5. Stop only on explicit approval or when the user asks to stop. Iterate with no comments is not approval.
 
-1. Identify the plan to review — the most recent plan, design, or proposal you produced
-   in this conversation. If there isn't a clear one yet, ask the user what to review (or
-   draft a first version), then continue.
-2. Call the `publish_plan` MCP tool with the full plan as **markdown**. This opens/updates
-   the review page in the browser and returns a local URL.
-3. Call the `await_feedback` MCP tool. It **blocks** until the user clicks "Iterate" in the
-   browser, then returns their inline comments as a list of `{ quotedText, comment }`.
-4. Revise the plan so it honors every comment — apply each note to the passage it quotes.
-5. Call `publish_plan` again with the revised markdown, then `await_feedback` again. Repeat.
-6. Stop when `await_feedback` returns **no comments** (treat as approval — confirm the plan is
-   agreed and end the loop), or when the user tells you in chat to stop.
-
-Keep chat messages between rounds short: the browser is the source of truth, so don't paste
-the whole plan into chat each round. A one-line summary of what changed is enough.
+Keep main-chat updates brief because the browser remains the source of truth.

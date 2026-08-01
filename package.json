@@ -3,7 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Claude Code plugin: review and iterate on Claude's plans with inline browser comments instead of linear chat.",
+  "description": "Claude Code and Codex plugin: review and iterate on plans with inline browser comments instead of linear chat.",
+  "scripts": {
+    "build": "esbuild server/index.mjs --bundle --platform=node --format=esm --target=node18 --outfile=server/bundle.mjs --external:node:*",
+    "test:chat": "node tests/ephemeral-side-chat-unit.mjs && node tests/multi-turn-chat-smoke.mjs",
+    "test:chat:real": "node tests/ephemeral-app-server-smoke.mjs",
+    "test:chat:e2e": "node tests/private-chat-e2e.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.23.0"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
     "marked": "^12.0.0",

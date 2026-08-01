@@ -2,7 +2,9 @@
   "mcpServers": {
     "plan-review": {
       "command": "node",
-      "args": ["server/index.mjs"]
+      "args": ["./server/bundle.mjs"],
+      "cwd": ".",
+      "tool_timeout_sec": 3600
     }
   }
 }

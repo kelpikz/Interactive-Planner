@@ -1,0 +1,35 @@
+{
+  "name": "plan-review",
+  "version": "0.1.0+codex.20260801213912",
+  "description": "Review Codex plans with inline comments and private ephemeral side chats in a local browser.",
+  "author": {
+    "name": "ajithprasad004",
+    "url": "https://github.com/ajithprasad004"
+  },
+  "homepage": "https://github.com/ajithprasad004/plan-review",
+  "repository": "https://github.com/ajithprasad004/plan-review",
+  "keywords": [
+    "planning",
+    "review",
+    "inline-comments",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Plan Review",
+    "shortDescription": "Review plans with inline comments and side chats",
+    "longDescription": "Publish a Codex plan to a local review page, annotate passages inline, ask questions in private ephemeral side chats that stay out of the task list, and iterate until the plan is approved.",
+    "developerName": "ajithprasad004",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/ajithprasad004/plan-review",
+    "defaultPrompt": [
+      "Review my latest plan with inline comments"
+    ]
+  }
+}

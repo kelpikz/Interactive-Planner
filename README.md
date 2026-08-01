@@ -1,49 +1,77 @@
 # plan-review
 
-A Claude Code plugin for reviewing and iterating on Claude's plans with **inline
-browser comments** instead of describing edits in linear chat. You highlight text
-in a rendered plan, leave Google-Docs-style notes, click **Iterate**, and Claude
-comes back with the next version — repeated until you're happy. When it's good,
-click **Approve** to accept the plan, close the page, and shut the server down.
+A Claude Code and Codex plugin for reviewing AI-generated plans with inline
+browser comments and private side chats. Highlight plan text to request an
+edit or ask a question, iterate until the plan is ready, then approve it.
 
-Built per [PLAN.md](PLAN.md) (ADR-0001).
+The plugin uses one long-lived Node process as both an MCP server and a local
+HTTP server for the browser UI.
 
 ## How it works
 
-One long-lived Node process is both an **MCP server** (tools for Claude) and a
-**local HTTP server** (the review UI):
+- `publish_plan(markdown)` renders a plan version and pushes it to the browser.
+- `await_feedback()` blocks until the browser submits comments or approval.
+- In Codex, each new browser conversation gets a private ephemeral App Server
+  thread. Follow-ups reuse it, but it is not persisted or shown in the task list.
+- `publish_answer(chatId, messageId, answer)` is a compatibility fallback for
+  hosts that cannot create Codex ephemeral threads.
 
-- `publish_plan(markdown)` — renders a plan version and pushes it to the browser
-  (via SSE); returns the local URL.
-- `await_feedback()` — **blocks** until you click "Iterate" or "Approve", then
-  returns your comments as `[{ quotedText, comment }]` plus whether you approved.
-
-The `/plan-review` slash command drives the loop: `publish_plan` → `await_feedback`
-→ revise → repeat. Clicking **Approve** (or submitting no comments) ends the loop;
-Approve also closes the page and shuts the server down.
+Only an explicit **Approve** action ends the review. Approval also closes the UI
+and shuts down the local server.
 
 ## Layout
 
 | Path | What |
 |------|------|
-| `server/index.mjs` | MCP + HTTP/SSE server |
-| `server/ui.html` | Review UI (rendered plan, comment popover, sidebar, Iterate, Approve) |
-| `commands/plan-review.md` | The `/plan-review` slash command |
-| `.claude-plugin/plugin.json` | Plugin manifest (for distribution) |
-| `.mcp.json` | Registers the server for **local** use in this project |
+| `server/index.mjs` | MCP and HTTP/SSE server source |
+| `server/codex-app-server.mjs` | Private ephemeral Codex side-chat client |
+| `server/bundle.mjs` | Self-contained build used by the installed plugin |
+| `server/ui.html` | Plan, comments, private side-chat transcript, and review controls |
+| `commands/plan-review.md` | Claude Code slash-command workflow |
+| `skills/plan-review/SKILL.md` | Codex plan-review and private-chat workflow |
+| `.claude-plugin/plugin.json` | Claude Code plugin manifest |
+| `.claude-plugin/marketplace.json` | Marketplace manifest |
+| `.codex-plugin/plugin.json` | Codex plugin manifest |
+| `.mcp.json` | Codex MCP server configuration |
 
-## Use it (local dev)
+## Install
 
-1. `npm install` (already done).
-2. Make sure Claude Code has loaded `.mcp.json` — the `plan-review` server should
-   show as connected (reconnect via `/mcp` or restart if you just changed it).
-3. Ask Claude for a plan, then run `/plan-review`.
-4. A browser tab opens. Select text → leave comments → click **Iterate**.
-5. Claude revises and republishes. Repeat until approved.
+### Claude Code
 
-## Notes / v1 scope
+```text
+/plugin marketplace add ajithprasad004/plan-review
+/plugin install plan-review
+```
 
-- Single local user; state is in-memory (no persistence, auth, or hosting).
-- Comments are captured as highlighted text + note with **no positional anchoring** —
-  they reset on each new version. Version-aware anchoring is a later concern.
-- Windows-focused browser auto-open; the URL is also returned by `publish_plan`.
+### Codex
+
+Add this repository as a local marketplace, then install `plan-review`. The
+plugin ships with a bundled server and does not need `npm install` at runtime.
+
+## Use it
+
+1. Ask for a plan, then ask Codex to use `plan-review` (or run `/plan-review` in
+   Claude Code).
+2. In the browser, highlight text and choose **Comment** to request a change, or
+   **Ask question** to start a side chat about that passage.
+3. The answer appears in a ChatGPT-style transcript. Use the composer below it
+   for follow-ups; they continue in the same private in-memory conversation.
+4. Submit comments with **Iterate** to revise and republish the plan. Repeat until
+   you click **Approve**.
+
+## Development
+
+`server/index.mjs` is the source and `server/bundle.mjs` is the committed build.
+After editing the source, rebuild it:
+
+```text
+npm install
+npm run build
+```
+
+## Current scope
+
+- Single local user; state is in-memory with no persistence, authentication, or hosting.
+- Comments use highlighted text plus a note and have no positional anchoring.
+- Comments and ephemeral side chats reset when a revised plan version is published.
+- Browser auto-open is Windows-focused; `publish_plan` also returns the local URL.
